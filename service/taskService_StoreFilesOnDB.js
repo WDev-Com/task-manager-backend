@@ -4,7 +4,15 @@ const HttpError = require("../util/htttp-error");
 const { mongoose } = require("mongoose");
 
 const convertToDate = (dateString) => {
-  const [day, month, year] = dateString.split("/").map(Number);
+  if (!dateString) return null; // Handle empty input gracefully
+  let parts = dateString.split("-");
+  let day, month, year;
+  if (parts[0].length === 4) {
+    [year, month, day] = parts.map(Number);
+  } else {
+    [day, month, year] = parts.map(Number);
+  }
+  if (year < 100) year += 2000;
   return new Date(year, month - 1, day);
 };
 
@@ -13,7 +21,7 @@ const createTask = async (taskData, file) => {
     if (!file || !file.id) {
       throw new HttpError("File upload failed", 400);
     }
-
+    console.log(taskData);
     const newTask = new Task({
       ...taskData,
       created_on: taskData.created_on
@@ -22,7 +30,7 @@ const createTask = async (taskData, file) => {
       deadline: taskData.deadline ? convertToDate(taskData.deadline) : null,
       file_id: file.id,
     });
-
+    // console.log(newTask);
     await newTask.save();
     return newTask;
   } catch (error) {
@@ -52,6 +60,12 @@ const updateTask = async (taskId, taskData, file) => {
     const task = await Task.findById(taskId);
     if (!task) throw new HttpError("Task not found", 404);
 
+    // Check if the deadline has passed
+    const currentDate = new Date();
+    if (task.deadline && new Date(task.deadline) < currentDate) {
+      throw new HttpError("Cannot update status after the deadline", 400);
+    }
+
     if (file) {
       await deleteFileById(task.file_id); // Delete old file
       task.file_id = file.id;
@@ -59,6 +73,7 @@ const updateTask = async (taskId, taskData, file) => {
 
     task.title = taskData.title || task.title;
     task.description = taskData.description || task.description;
+    task.status = taskData.status || task.status;
     task.deadline = taskData.deadline
       ? convertToDate(taskData.deadline)
       : task.deadline;

@@ -6,6 +6,19 @@ const errorHandler = require("./middleware/errorHandler_middleware");
 const app = express();
 const { conn } = require("./db/connection");
 
+/**
+ * for handling CORS errors and setting headers
+ */
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT,PATCH, DELETE");
+  next();
+});
+
 /// Handling the incoming Data
 app.use(express.json());
 app.use(
